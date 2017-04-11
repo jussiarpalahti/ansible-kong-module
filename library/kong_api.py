@@ -13,7 +13,7 @@ EXAMPLES = '''
     kong_admin_uri: http://127.0.0.1:8001/apis/
     name: "Mockbin"
     taget_url: "http://mockbin.com"
-    request_host: "mockbin.com"    
+    hosts: "mockbin.com"    
     state: present
 
 - name: Delete a site
@@ -41,7 +41,7 @@ class KongAPI:
         return False
 
     def add_or_update(self, name, upstream_url,
-                      request_host=None, uris=None, strip_uri=False, preserve_host=False):
+                      hosts=None, uris=None, strip_uri=False, preserve_host=False):
 
         method = "post"        
         url = self.__url("/apis/")
@@ -58,8 +58,8 @@ class KongAPI:
             "strip_uri": strip_uri,
             "preserve_host": preserve_host
         }
-        if request_host is not None:
-            data['request_host'] = request_host
+        if hosts is not None:
+            data['hosts'] = hosts
         if uris is not None:
             data['uris'] = uris
 
@@ -96,7 +96,7 @@ class ModuleHelper:
             kong_admin_uri = dict(required=False, type='str'),
             name = dict(required=False, type='str'),
             upstream_url = dict(required=False, type='str'),
-            request_host = dict(required=False, type='str'),    
+            hosts = dict(required=False, type='list'),
             uris = dict(required=False, type='list'),
             strip_uri = dict(required=False, default=False, type='bool'),
             preserve_host = dict(required=False, default=False, type='bool'),         
@@ -137,7 +137,7 @@ def main():
     fields = [
         'name', 
         'upstream_url', 
-        'request_host',
+        'hosts',
         'uris',
         'strip_uri',
         'preserve_host'

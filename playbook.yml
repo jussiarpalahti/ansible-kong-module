@@ -43,7 +43,7 @@
         kong_admin_uri: "{{kong_admin_base_url}}"
         name: "{{item.name}}"
         upstream_url: "{{item.upstream_url}}"
-        request_host: "{{item.request_host|default(omit)}}"
+        hosts: "{{item.request_host|default(omit)}}"
         uris: "{{item.uris|default(omit)}}"
         strip_uri: "{{item.strip_uri|default(omit)}}"
         preserve_host: "{{item.preserve_host|default(omit)}}"

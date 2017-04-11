@@ -1,7 +1,9 @@
 
 # ansible-kong-module
 
-NOTE: works only with Kong earlier than 0.10 due to proxy config changes
+NOTE: works only with Kong 0.10 due to proxy config changes
+
+Haven't yet tested beyond hosts and uris parameters.
 
 ## Changes in this repository
 

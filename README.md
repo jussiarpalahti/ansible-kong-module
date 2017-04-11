@@ -1,4 +1,16 @@
+
 # ansible-kong-module
+
+NOTE: works only with Kong earlier than 0.10 due to proxy config changes
+
+## Changes in this repository
+
+ * more plugins supported
+ * some bugs fixed
+ * more parameterized playbook
+
+## Original README
+
 A Module to help manage a [Kong](http://getkong.com) API Gateway
 
 > For a full write-up, please see the blog series: [Kong Up and Running](http://blog.toast38coza.me/kong-up-and-running/)
@@ -25,12 +37,12 @@ This might take a while to run ... after it is finished you can find the IP of y
 $ docker-machine ip default
 > 1.2.3.4
 ```
-(assuming your docker-machine is called default). 
+(assuming your docker-machine is called default).
 
-You can then access your Kong API at: 
+You can then access your Kong API at:
 
-* **Admin interface:** 1.2.3.4:8001 
-* **REST Interface:** 1.2.3.4:8000 
+* **Admin interface:** 1.2.3.4:8001
+* **REST Interface:** 1.2.3.4:8000
 
 
 **Configure your Kong instance with:**

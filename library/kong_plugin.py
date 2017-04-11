@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/root/api_venv/bin/python2
 
 import requests
 
@@ -32,7 +32,7 @@ class KongPlugin:
             "name": name,
         }
         if config is not None:
-            data.update(config)   
+            data.update({k: v for k, v in config.items() if v is not None and v is not ""})
 
         plugin_id = self._get_plugin_id(name, plugins_list)
         if plugin_id is None:            
@@ -41,9 +41,12 @@ class KongPlugin:
             url = "{}/{}" . format (self.base_url, plugin_id)
             return requests.patch(url, data)
 
-    def delete(self, id):
+    def delete(self, name):
+        plugins_response = self.list()
+        plugins_list = plugins_response.json().get('data', [])
+        plugin_id = self._get_plugin_id(name, plugins_list)
 
-        url = "{}/{}" . format (self.base_url, id)
+        url = "{}/{}" . format (self.base_url, plugin_id)
         return requests.delete(url)
 
 
@@ -90,7 +93,6 @@ class ModuleHelper:
 
     
 def main():
-
     state_to_method = {
         "present": "add",
         "absent": "delete"
@@ -107,7 +109,7 @@ def main():
     if state == "present":
         response = api.add_or_update(**data)
     if state == "absent":
-        response = api.delete(module.params['plugin_id'])
+        response = api.delete(module.params['plugin_name'])
     if state == "list":
         response = api.list()
     

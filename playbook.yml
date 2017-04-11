@@ -1,59 +1,146 @@
-- hosts: localhost
-  vars: 
-    - kong_admin_base_url: "http://192.168.99.100:8001"
-    - kong_base_url: "http://192.168.99.100:8000"
-    - kong_consumers:
-      - username: Jason
+---
+- name: config Kong
+#
+# Configuring APIs and plugins in Kong
+# relies on https://github.com/toast38coza/ansible-kong-module/
+#
+  hosts: apifront
+  vars:
+    ansible_python_interpreter: "/home/kong/api_venv/bin/python2"
+    full_install: no
+    kong_admin_user: "kong"
+    kong_admin_base_url: "http://localhost:8001"
+    kong_base_url: "http://localhost:8000"
+    file_log_root_path: "/var/log/kong"
+    kong_consumers:
+      - username: jei
         key: 123
+    apis:
+      - name: "myapi"
+        upstream_url: "http://httpbin.org"
+        request_path: "/httpbin"
+        strip_request_path: yes
+        preserve_host: no
+        state: present
+        key_auth: absent
+        default_consumer: present
+
   tasks:
-   
+
+    - name: Dump all vars
+      action: template src=templates/dumpall.j2 dest=/tmp/ansible.all
+
+    - name: Install Nginx with Lua if full install is true
+      apt: pkg={{item}} state=present update-cache=yes cache_valid_time=86400
+      with_items:
+      - nginx-extras
+      when: full_install
+      tags: api_setup_nginx
+
     - name: Register APIs
       kong_api:
         kong_admin_uri: "{{kong_admin_base_url}}"
-        name: "mockbin"
-        upstream_url: "http://mockbin.com"
-        request_host: "mockbin.com"   
-        request_path: "/mockbin"   
-        strip_request_path: yes
-        state: present
+        name: "{{item.name}}"
+        upstream_url: "{{item.upstream_url}}"
+        request_host: "{{item.request_host|default(omit)}}"
+        request_path: "{{item.request_path|default(omit)}}"
+        strip_request_path: "{{item.strip_request_path|default(omit)}}"
+        preserve_host: "{{item.preserve_host|default(omit)}}"
+        state: "{{item.present|default(omit)}}"
+      with_items: "{{apis}}"
+      tags: api_setup
 
     - name: Verify API was added
-      uri: 
-        url: "{{kong_admin_base_url}}/apis/mockbin"
+      uri:
+        url: "{{kong_admin_base_url}}/apis/{{item.name|default(omit)}}"
         status_code: 200
-    
-    - name: Add key authentication 
+      with_items: "{{apis}}"
+      when: item.state == "present"
+      tags: api_setup
+
+    - name: Add key authentication
       kong_plugin:
         kong_admin_uri: "{{kong_admin_base_url}}"
-        api_name: "mockbin"
-        plugin_name: "key-auth"        
-        state: present  
-      
+        api_name: "{{item.name}}"
+        plugin_name: "key-auth"
+        state: "{{item.key_auth}}"
+      with_items: "{{apis}}"
+      # when: item.key_auth
+      tags: api_setup
+
     - name: Verify key auth was added
-      uri: 
-        url: "{{kong_base_url}}/mockbin"
-        status_code: 401 
+      uri:
+        url: "{{kong_base_url}}{{item.request_path|default(omit)}}"
+        status_code: 401
+      with_items: "{{apis}}"
+      when: item.key_auth == "present"
+      tags: api_setup
 
     - name: Add a consumer
       kong_consumer:
         kong_admin_uri: "{{kong_admin_base_url}}"
-        username: "{{item.username}}"
+        username: "{{item.name}}_default_consumer"
         state: present
-      with_items: "{{kong_consumers}}"
+      with_items: "{{apis}}"
+      when: item.default_consumer|default(None)
+      tags: api_consumer
 
-    - name: Configure consumer
+    - name: Configure default consumer
       kong_consumer:
         kong_admin_uri: "{{kong_admin_base_url}}"
-        username: "{{item.username}}"
+        username: "{{item.name}}_default_consumer"
         api_name: key-auth
-        data: 
-          key: "{{item.key}}"
+        data:
+          key: "{{item.name}}_default_consumer"
         state: configure
-      with_items: "{{kong_consumers}}" 
+      with_items: "{{apis}}"
+      when: item.default_consumer|default(None)
+      tags: api_consumer
 
-    - name: Verify consumers can access API 
-      uri: 
-        url: "{{kong_base_url}}/mockbin"
-        HEADER_apikey: "{{item.key}}"
+    - name: Verify consumers can access API (ignoring errors for now)
+      uri:
+        url: "{{kong_base_url}}{{item.request_path}}/"
+        HEADER_apikey: "{{item.name}}_default_consumer"
         status_code: 200
-      with_items: "{{kong_consumers}}"
+      with_items: "{{apis}}"
+      when: (item.state == "present") and (item.default_consumer|default(None))
+      tags: api_consumer
+      ignore_errors: yes
+
+    - name: Ensure logging directory exists
+      file: path="{{file_log_root_path}}" state=directory mode=0700
+      become: true
+      tags: api_logging
+
+    - name: Configure file log plugin
+      kong_plugin:
+        plugin_name: "file-log"
+        kong_admin_uri: "{{kong_admin_base_url}}"
+        api_name: "{{item.name}}"
+        config:
+          config.path: "{{file_log_root_path}}/{{item.name}}.log"
+        state: "{{item.file_log}}"
+      with_items: "{{apis}}"
+      when: item.file_log|default(None)
+      tags: api_logging
+
+    - name: Configure rate limit plugin
+      kong_plugin:
+        plugin_name: "rate-limiting"
+        kong_admin_uri: "{{kong_admin_base_url}}"
+        api_name: "{{item.name}}"
+        config:
+          config.second: "{{item.rate_limit_config.second|default(None)}}"
+          config.hour: "{{item.rate_limit_config.hour|default(None)}}"
+          config.day: "{{item.rate_limit_config.day|default(None)}}"
+          config.month: "{{item.rate_limit_config.month|default(None)}}"
+          config.year: "{{item.rate_limit_config.year|default(None)}}"
+          # asynchronous rate counter, default is False
+          config.async: "{{item.rate_limit_config.async|default(None)}}"
+          # whether to allow requests through when Kong database is down
+          config.continue_on_error: "{{item.rate_limit_config.continue_on_error|default(None)}}"
+          consumer_id: "{% if item.default_consumer_rate_limit|default(None) %}{{item.name}}_default_consumer{% endif%}"
+        state: "{{item.rate_limit}}"
+      with_items: "{{apis}}"
+      when: item.rate_limit|default(None)
+      tags: api_ratelimit

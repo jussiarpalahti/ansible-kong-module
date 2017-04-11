@@ -14,8 +14,8 @@ class ModuleHelperTestCase(unittest.TestCase):
             "name", 
             "upstream_url", 
             "request_host", 
-            "request_path", 
-            "strip_request_path", 
+            "uris",
+            "strip_uri",
             "preserve_host"
         ]
 		self.helper = ModuleHelper(fields)
@@ -24,8 +24,8 @@ class ModuleHelperTestCase(unittest.TestCase):
 			"kong_admin_uri": mock_kong_admin_url,
             "name": "mockbin", 
             "request_host": "mockbin.com", 
-            "request_path": "/mockbin", 
-            "strip_request_path": True, 
+            "uris": "/mockbin",
+            "strip_uri": True,
             "preserve_host": False,
             "upstream_url": "http://mockbin.com",
 			"state": "present"
@@ -54,8 +54,8 @@ class MainTestCase(unittest.TestCase):
 	        'name', 
 	        'upstream_url', 
 	        'request_host',
-	        'request_path',
-	        'strip_request_path',
+	        'uris',
+	        'strip_uri',
 	        'preserve_host'
 	    ]
 
@@ -147,14 +147,14 @@ class KongAPITestCase(unittest.TestCase):
 			"name":"mockbin", 
 			"upstream_url":"http://mockbin.com", 
 			"request_host" : "mockbin.com",
-			"request_path" : "/mockbin" 
+			"uris" : "/mockbin"
 		}
 		response = self.api.add_or_update(**request_data)
 
 		assert response.status_code == 201
 
 		data = parse_qs(responses.calls[1].request.body)
-		expected_keys = ['name', 'upstream_url', 'request_host', 'request_path', 'strip_request_path', 'preserve_host']
+		expected_keys = ['name', 'upstream_url', 'request_host', 'uris', 'strip_uri', 'preserve_host']
 		for key in expected_keys:
 			assert data.get(key, None) is not None, \
 				"Expect all required data to have been sent. What was actually sent: {}" . format (data)
@@ -177,14 +177,14 @@ class KongAPITestCase(unittest.TestCase):
 			"name":"mockbin", 
 			"upstream_url":"http://mockbin.com", 
 			"request_host" : "mockbin.com",
-			"request_path" : "/mockbin" 
+			"uris" : "/mockbin"
 		}
 		response = self.api.add_or_update(**request_data)
 
 		assert response.status_code == 201
 
 		data = parse_qs(responses.calls[1].request.body)
-		expected_keys = ['name', 'upstream_url', 'request_host', 'request_path', 'strip_request_path', 'preserve_host']
+		expected_keys = ['name', 'upstream_url', 'request_host', 'uris', 'strip_uri', 'preserve_host']
 		for key in expected_keys:
 			assert data.get(key, None) is not None, \
 				"Expect all required data to have been sent. What was actually sent: {}" . format (data)
@@ -247,8 +247,8 @@ class IntegrationTests(unittest.TestCase):
 			"name":"mockbin", 
 			"upstream_url":"http://mockbin.com", 
 			"request_host" : "mockbin.com",
-			"request_path" : "/mockbin",
-			"strip_request_path": True
+			"uris" : "/mockbin",
+			"strip_uri": True
 		}
 		response = self.api.add_or_update(**request_data)
 		import pdb;pdb.set_trace()

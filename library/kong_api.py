@@ -40,7 +40,8 @@ class KongAPI:
                 return True 
         return False
 
-    def add_or_update(self, name, upstream_url, request_host=None, request_path=None, strip_request_path=False, preserve_host=False):
+    def add_or_update(self, name, upstream_url,
+                      request_host=None, uris=None, strip_uri=False, preserve_host=False):
 
         method = "post"        
         url = self.__url("/apis/")
@@ -54,13 +55,13 @@ class KongAPI:
         data = {
             "name": name,
             "upstream_url": upstream_url,
-            "strip_request_path": strip_request_path,
+            "strip_uri": strip_uri,
             "preserve_host": preserve_host
         }
         if request_host is not None:
             data['request_host'] = request_host
-        if request_path is not None:
-            data['request_path'] = request_path
+        if uris is not None:
+            data['uris'] = uris
 
         return getattr(requests, method)(url, data)
         
@@ -83,6 +84,7 @@ class KongAPI:
         url = self.__url(path)
         return requests.delete(url)
 
+
 class ModuleHelper:
 
     def __init__(self, fields):
@@ -95,12 +97,12 @@ class ModuleHelper:
             name = dict(required=False, type='str'),
             upstream_url = dict(required=False, type='str'),
             request_host = dict(required=False, type='str'),    
-            request_path = dict(required=False, type='str'),  
-            strip_request_path = dict(required=False, default=False, type='bool'), 
+            uris = dict(required=False, type='list'),
+            strip_uri = dict(required=False, default=False, type='bool'),
             preserve_host = dict(required=False, default=False, type='bool'),         
             state = dict(required=False, default="present", choices=['present', 'absent', 'latest', 'list', 'info'], type='str'),    
         )
-        return AnsibleModule(argument_spec=args,supports_check_mode=False)
+        return AnsibleModule(argument_spec=args, supports_check_mode=False)
 
     def prepare_inputs(self, module):
         url = module.params['kong_admin_uri']
@@ -136,8 +138,8 @@ def main():
         'name', 
         'upstream_url', 
         'request_host',
-        'request_path',
-        'strip_request_path',
+        'uris',
+        'strip_uri',
         'preserve_host'
     ]
 

@@ -18,8 +18,9 @@
     apis:
       - name: "myapi"
         upstream_url: "http://httpbin.org"
-        request_path: "/httpbin"
-        strip_request_path: yes
+        uris:
+          - "/httpbin"
+        strip_uri: yes
         preserve_host: no
         state: present
         key_auth: absent
@@ -43,8 +44,8 @@
         name: "{{item.name}}"
         upstream_url: "{{item.upstream_url}}"
         request_host: "{{item.request_host|default(omit)}}"
-        request_path: "{{item.request_path|default(omit)}}"
-        strip_request_path: "{{item.strip_request_path|default(omit)}}"
+        uris: "{{item.uris|default(omit)}}"
+        strip_uri: "{{item.strip_uri|default(omit)}}"
         preserve_host: "{{item.preserve_host|default(omit)}}"
         state: "{{item.present|default(omit)}}"
       with_items: "{{apis}}"
@@ -70,7 +71,7 @@
 
     - name: Verify key auth was added
       uri:
-        url: "{{kong_base_url}}{{item.request_path|default(omit)}}"
+        url: "{{kong_base_url}}{{item.uris|default(omit)}}"
         status_code: 401
       with_items: "{{apis}}"
       when: item.key_auth == "present"
@@ -99,7 +100,7 @@
 
     - name: Verify consumers can access API (ignoring errors for now)
       uri:
-        url: "{{kong_base_url}}{{item.request_path}}/"
+        url: "{{kong_base_url}}{{item.uris}}/"
         HEADER_apikey: "{{item.name}}_default_consumer"
         status_code: 200
       with_items: "{{apis}}"
